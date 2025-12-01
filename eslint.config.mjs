@@ -14,7 +14,8 @@ export default [
         project: './tsconfig.json'
       },
       globals: {
-        process: 'readonly'
+        process: 'readonly',
+        setTimeout: 'readonly'
       }
     },
     plugins: {

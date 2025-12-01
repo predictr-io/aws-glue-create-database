@@ -2,6 +2,47 @@ import * as core from '@actions/core';
 import { GlueClient, CreateDatabaseCommand, GetDatabaseCommand, DatabaseInput } from '@aws-sdk/client-glue';
 
 /**
+ * Wait for database to be available by polling GetDatabase
+ * @param glueClient - Glue client instance
+ * @param databaseName - Name of the database to check
+ * @param catalogId - Optional catalog ID
+ * @param maxAttempts - Maximum number of polling attempts (default: 10)
+ * @param delayMs - Delay between attempts in milliseconds (default: 1000)
+ */
+async function waitForDatabase(
+  glueClient: GlueClient,
+  databaseName: string,
+  catalogId?: string,
+  maxAttempts = 10,
+  delayMs = 1000
+): Promise<void> {
+  core.info('Verifying database is available...');
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await glueClient.send(new GetDatabaseCommand({
+        CatalogId: catalogId,
+        Name: databaseName,
+      }));
+      core.info(`✓ Database verified available after ${attempt} attempt(s)`);
+      return;
+    } catch (error: any) {
+      if (error.name === 'EntityNotFoundException') {
+        if (attempt < maxAttempts) {
+          core.info(`Database not yet available (attempt ${attempt}/${maxAttempts}), waiting ${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        } else {
+          throw new Error(`Database ${databaseName} was created but failed to become available after ${maxAttempts} attempts`);
+        }
+      } else {
+        // Unexpected error
+        throw error;
+      }
+    }
+  }
+}
+
+/**
  * Main action entry point
  * Creates an AWS Glue Data Catalog database with optional if-not-exists behavior
  */
@@ -78,6 +119,9 @@ async function run(): Promise<void> {
           DatabaseInput: databaseInput,
         }));
         core.info('Database created successfully');
+
+        // Wait for database to be available
+        await waitForDatabase(glueClient, databaseName, catalogId);
       } else if (error.message?.includes('already exists')) {
         // Re-throw our own error about database existing
         throw error;
