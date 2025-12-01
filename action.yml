@@ -1,0 +1,49 @@
+name: 'AWS Glue Create Database'
+description: 'Create AWS Glue Data Catalog databases with optional if-not-exists behavior'
+author: 'predictr-io'
+
+branding:
+  icon: 'database'
+  color: 'orange'
+
+inputs:
+  # Required parameters
+  database-name:
+    description: 'Name of the Glue database to create'
+    required: true
+
+  # Optional parameters
+  description:
+    description: 'Description of the database'
+    required: false
+
+  location-uri:
+    description: 'Location URI for the database (e.g., s3://my-bucket/database/)'
+    required: false
+
+  parameters:
+    description: 'Database parameters as JSON object (key-value pairs)'
+    required: false
+
+  catalog-id:
+    description: 'AWS account ID for cross-account catalog access (defaults to current account)'
+    required: false
+
+  if-not-exists:
+    description: 'If true, silently succeed if database already exists (default: true)'
+    required: false
+    default: 'true'
+
+outputs:
+  database-name:
+    description: 'Name of the created database'
+
+  database-arn:
+    description: 'ARN of the created database'
+
+  already-exists:
+    description: 'True if database already existed, false if newly created'
+
+runs:
+  using: 'node24'
+  main: 'dist/index.js'
